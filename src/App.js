@@ -1,18 +1,27 @@
-import React, { useReducer } from "react";
+import React, { useReducer, useEffect } from "react";
 import { sortBy, groupBy } from "lodash-es";
+import * as matchit from "matchit";
 
 // TODO: Route manifest
 
-const mockInput = `1552321187728 /hello
-1552321187716 /is
-1552321187716 /it
-1552321187716 /me
-1552321187716 /hello
-0 /hello
+const mockInput = `1552321187728 /2019
+1552321187716 /2019/saskatoon
+1552321187716 /2019/utsunomiya
+0 /2019
+1552321187716 /2019/saskatoon/omg-did-not-expect-this
 `;
 
-const SetText = text => ({
-  type: "SetText",
+const mockRoutes = `'/:season/',
+'/:season/:eventId',
+`;
+
+const SetSourceLines = text => ({
+  type: "SetSourceLines",
+  text
+});
+
+const SetRoutes = text => ({
+  type: "SetRoutes",
   text
 });
 
@@ -25,24 +34,32 @@ const CalculateResults = () => ({
   type: "CalculateResults"
 });
 
+// TODO: Consider storing the "processed" data, and not the raw strings here
 const reducer = (prevState, action) => {
+  console.log(prevState, action)
   switch (action.type) {
-    case "SetText":
+    case "SetSourceLines":
       return {
         ...prevState,
-        text: action.text
+        sourceLines: parseSourceLines(action.text)
+      };
+
+    case "SetRoutes":
+      return {
+        ...prevState,
+        routes: parseRoutes(action.text)
       };
 
     case "SetMinutes":
       return {
         ...prevState,
-        minutes: action.minutes
+        minutes: parseInt(action.minutes)
       };
 
     case "CalculateResults":
       return {
         ...prevState,
-        results: calculateResults(prevState.text, prevState.minutes)
+        results: calculateResults(prevState.sourceLines, prevState.minutes, prevState.routes)
       };
 
     default:
@@ -51,13 +68,20 @@ const reducer = (prevState, action) => {
 };
 
 const initState = {
-  text: mockInput,
+  sourceLines: '',
   minutes: 10,
+  routes: '',
   results: null
 };
 
 function App() {
   const [state, dispatch] = useReducer(reducer, initState);
+  
+  useEffect(
+    () => {
+      console.log(state)
+    }, [state]
+  )
 
   return (
     <div className="pa3 min-vh-100 bg-near-white sans-serif lh-copy">
@@ -91,8 +115,31 @@ function App() {
                   className="w-100 code mb3 pa3"
                   placeholder={mockInput}
                   rows="10"
-                  value={state.text}
-                  onChange={ev => dispatch(SetText(ev.target.value))}
+                  onChange={ev => dispatch(SetSourceLines(ev.target.value))}
+                />
+              </div>
+              <div className="mb3">
+                <label
+                  htmlFor="routeTextarea"
+                  className="db mb3 f4 f3-ns lh-title fw6"
+                >
+                  Routes
+                </label>
+                <p
+                  className="mt0 mb3 f5 f4-ns lh-copy measure"
+                  id="routeTextareaDescription"
+                >
+                  Routes are used to help group URLs. They must be
+                  comma-separated. If a route does not match, then the
+                  path is shown verbatim.
+                </p>
+                <textarea
+                  id="routeTextarea"
+                  aria-describedby="sourceTextAreaDescription"
+                  className="w-100 code mb3 pa3"
+                  placeholder={mockRoutes}
+                  rows="10"
+                  onChange={ev => dispatch(SetRoutes(ev.target.value))}
                 />
               </div>
               <div className="mb3">
@@ -114,7 +161,7 @@ function App() {
                 </div>
               </div>
               <button
-                className="f5 f4-ns fw6 pv2 ph3 bg-blue hover-bg-dark-pink white br1 bn pointer"
+                className="f5 f4-ns fw6 pv2 ph3 bg-dark-blue hover-bg-dark-pink white br1 bn pointer"
                 onClick={ev => {
                   ev.preventDefault();
                   dispatch(CalculateResults());
@@ -150,20 +197,27 @@ function App() {
 }
 
 // TODO: Make a type Ok, Err
-function parseLines(text) {
+function parseSourceLines(text) {
   return text
     .split("\n")
-    .map(parseLine)
+    .map(parseSourceLine)
     .filter(arr => arr.length)
     .map(([maybePosix, route]) => [parseInt(maybePosix), route])
     .map(([posix, route]) => ({ posix, route }));
 }
 
-function parseLine(line) {
+function parseSourceLine(line) {
   return line
     .trim()
     .split(" ")
     .filter(str => !!str);
+}
+
+function parseRoutes(text) {
+  return text
+    .split(",")
+    .map(str => str.trim())
+    .map(str => matchit.parse(str));
 }
 
 const minutesToMillis = minutes => minutes * 60 * 1000;
@@ -198,16 +252,23 @@ function partitionByTime(minutes, arr) {
   return partitions;
 }
 
-function calculateResults(text, minutes) {
-  const posixAndRoutes = parseLines(text);
-  const groupedByRoute = groupBy(posixAndRoutes, "route");
+function calculateResults(sourceLines, minutes, routes) {
+  // TODO: Here, get the obj.route and group if it matches() a certain route, top-to-bottom
+  const groupedByRoute = groupBy(sourceLines, ({route}) => {
+    const match = matchit.match(route, routes);
+    // If there is a match, group by that, otherwise group verbatim
+    const routeToGroupBy = match.length ? match[0].old : route;
+    return routeToGroupBy;
+  });
+  console.log({groupedByRoute})
 
-  const res = Object.entries(groupedByRoute)
-    .map(([route, routeAndPosixArr]) => {
-      const posixArr = routeAndPosixArr.map(obj => obj.posix)
+  const res = Object.entries(groupedByRoute).map(
+    ([route, routeAndPosixArr]) => {
+      const posixArr = routeAndPosixArr.map(obj => obj.posix);
       const count = partitionByTime(minutes, posixArr).length;
-      return {route, count};
-    })
+      return { route, count };
+    }
+  );
 
   return res;
 }
