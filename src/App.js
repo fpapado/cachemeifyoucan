@@ -36,7 +36,7 @@ const CalculateResults = () => ({
 
 // TODO: Consider storing the "processed" data, and not the raw strings here
 const reducer = (prevState, action) => {
-  console.log(prevState, action)
+  console.log(prevState, action);
   switch (action.type) {
     case "SetSourceLines":
       return {
@@ -59,7 +59,11 @@ const reducer = (prevState, action) => {
     case "CalculateResults":
       return {
         ...prevState,
-        results: calculateResults(prevState.sourceLines, prevState.minutes, prevState.routes)
+        results: calculateResults(
+          prevState.sourceLines,
+          prevState.minutes,
+          prevState.routes
+        )
       };
 
     default:
@@ -68,29 +72,28 @@ const reducer = (prevState, action) => {
 };
 
 const initState = {
-  sourceLines: '',
+  sourceLines: "",
   minutes: 10,
-  routes: '',
+  routes: "",
   results: null
 };
 
 function App() {
   const [state, dispatch] = useReducer(reducer, initState);
-  
-  useEffect(
-    () => {
-      console.log(state)
-    }, [state]
-  )
+
+  useEffect(() => {
+    console.log(state);
+  }, [state]);
 
   return (
-    <div className="pa3 min-vh-100 bg-near-white sans-serif lh-copy">
-      <header className="pv3 tc">
-        <h1 className="f2 f1-ns mt0 mb4 mb5-ns lh-title">
-          Cache me if you can
-        </h1>
+    <div className="pa3 min-vh-100 flex flex-column bg-near-white sans-serif lh-copy">
+      <header className="pv3 tc mb4 mb5-ns">
+        <h1 className="f2 f1-ns mt0 mb0 lh-title ttu">Cache me if you can</h1>
+        <p className="f5 f4-ns lh-copy">
+          A tool to help you measure the effect of cache times on requests
+        </p>
       </header>
-      <main className="mw8 center">
+      <main className="flex-grow-1 w-100 mw8 center">
         <div className="flex flex-column">
           <section className="mb4 mb5-ns">
             <form>
@@ -130,8 +133,8 @@ function App() {
                   id="routeTextareaDescription"
                 >
                   Routes are used to help group URLs. They must be
-                  comma-separated. If a route does not match, then the
-                  path is shown verbatim.
+                  comma-separated. If a route does not match, then the path is
+                  shown verbatim.
                 </p>
                 <textarea
                   id="routeTextarea"
@@ -192,6 +195,21 @@ function App() {
           </section>
         </div>
       </main>
+      <footer className="mt4 mb3 mw7 center f5 tc">
+        <a
+          className="dark-blue"
+          href="https://github.com/fpapado/cachemeifyoucan"
+        >
+          This... thing is open source on Github
+        </a>
+        <p className="mt2 mb0">
+          Made with{" "}
+          <span role="img" aria-label="Grinning Face With Sweat">
+            😅
+          </span>{" "}
+          by <a className="dark-blue" href="https://fotis.xyz">Fotis Papadogeorgopoulos</a>
+        </p>
+      </footer>
     </div>
   );
 }
@@ -254,13 +272,13 @@ function partitionByTime(minutes, arr) {
 
 function calculateResults(sourceLines, minutes, routes) {
   // TODO: Here, get the obj.route and group if it matches() a certain route, top-to-bottom
-  const groupedByRoute = groupBy(sourceLines, ({route}) => {
+  const groupedByRoute = groupBy(sourceLines, ({ route }) => {
     const match = matchit.match(route, routes);
     // If there is a match, group by that, otherwise group verbatim
     const routeToGroupBy = match.length ? match[0].old : route;
     return routeToGroupBy;
   });
-  console.log({groupedByRoute})
+  console.log({ groupedByRoute });
 
   const res = Object.entries(groupedByRoute).map(
     ([route, routeAndPosixArr]) => {
