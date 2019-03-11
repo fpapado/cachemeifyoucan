@@ -1,12 +1,14 @@
 import React, { useReducer } from "react";
+import { sortBy, groupBy } from "lodash-es";
 
 // TODO: Route manifest
 
-const mockInput = `1552321187716 /hello
+const mockInput = `1552321187728 /hello
 1552321187716 /is
 1552321187716 /it
 1552321187716 /me
 1552321187716 /hello
+0 /hello
 `;
 
 const SetText = text => ({
@@ -50,7 +52,7 @@ const reducer = (prevState, action) => {
 
 const initState = {
   text: mockInput,
-  numbers: 10,
+  minutes: 10,
   results: null
 };
 
@@ -105,6 +107,7 @@ function App() {
                     id="cachetime"
                     className="db w4 mb3 mr2 pa2"
                     placeholder="10"
+                    value={state.minutes}
                     onChange={ev => dispatch(SetMinutes(ev.target.value))}
                   />
                   <div className="f5 f4-ns">minutes</div>
@@ -148,15 +151,65 @@ function App() {
 
 // TODO: Make a type Ok, Err
 function parseLines(text) {
-  return text.split("\n").map(parseLine);
+  return text
+    .split("\n")
+    .map(parseLine)
+    .filter(arr => arr.length)
+    .map(([maybePosix, route]) => [parseInt(maybePosix), route])
+    .map(([posix, route]) => ({ posix, route }));
 }
 
 function parseLine(line) {
-  return line.trim().split(" ");
+  return line
+    .trim()
+    .split(" ")
+    .filter(str => !!str);
+}
+
+const minutesToMillis = minutes => minutes * 60 * 1000;
+
+function partitionByTime(minutes, arr) {
+  let partitions = [];
+
+  // Sort the array, get the first start/end time
+  const sorted = sortBy(arr);
+  let startTime = sorted[0];
+  let currentPartition = [];
+  let endTime = startTime + minutesToMillis(minutes);
+
+  // Go over every time, partitioning when there's a gap
+  for (const time of sorted) {
+    if (time < endTime) {
+      currentPartition = [...currentPartition, time];
+    } else {
+      // Push the current queued partition
+      partitions = [...partitions, currentPartition];
+
+      // Start a new partition
+      currentPartition = [time];
+      endTime = time + minutesToMillis(minutes);
+    }
+  }
+
+  if (currentPartition.length > 0) {
+    partitions = [...partitions, currentPartition];
+  }
+
+  return partitions;
 }
 
 function calculateResults(text, minutes) {
-  return [{ route: "/hello", count: 2 }, { route: "/is", count: 1 }];
+  const posixAndRoutes = parseLines(text);
+  const groupedByRoute = groupBy(posixAndRoutes, "route");
+
+  const res = Object.entries(groupedByRoute)
+    .map(([route, routeAndPosixArr]) => {
+      const posixArr = routeAndPosixArr.map(obj => obj.posix)
+      const count = partitionByTime(minutes, posixArr).length;
+      return {route, count};
+    })
+
+  return res;
 }
 
 export default App;
