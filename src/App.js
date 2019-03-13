@@ -2,8 +2,6 @@ import React, { useReducer, useEffect } from "react";
 import { map, flatMap, sortBy, groupBy } from "lodash-es";
 import * as matchit from "matchit";
 
-// TODO: Route manifest
-
 const mockInput = `1552321187728 /2019
 1552321187716 /2019/saskatoon
 1552321187716 /2019/utsunomiya
@@ -39,7 +37,7 @@ const CalculateResults = () => ({
   type: "CalculateResults"
 });
 
-// TODO: Consider storing the "processed" data, and not the raw strings here
+// TODO: Evaluate whether we should store raw data or parsed lines onChange
 const reducer = (prevState, action) => {
   switch (action.type) {
     case "SetSourceLines":
@@ -232,11 +230,10 @@ function App() {
                   </dl>
                 </section>
                 <section className="mb4">
-                  <label
-                    htmlFor="resultTextArea"
-                    className="db"
-                  >
-                    <h3 className="mt0 mb3 f4 f3-ns lh-title fw6">Result log lines</h3>
+                  <label htmlFor="resultTextArea" className="db">
+                    <h3 className="mt0 mb3 f4 f3-ns lh-title fw6">
+                      Result log lines
+                    </h3>
                   </label>
                   <textarea
                     id="resultTextArea"
@@ -339,7 +336,7 @@ function calculateResults(sourceLines, minutes, routes, countByRoutes) {
   });
 
   // First, partition the log lines by URL
-  // GroupedByUrl -> Array<{route: string, partition: string[]}>
+  // GroupedByUrl -> Array<{route: string, partitions: number[][]}>
   const partitionedByTime = Object.entries(groupedByUrl).map(
     ([route, routeAndPosixArr]) => {
       const posixArr = routeAndPosixArr.map(obj => obj.posix);
@@ -359,9 +356,12 @@ function calculateResults(sourceLines, minutes, routes, countByRoutes) {
         const routeToGroupBy = match.length ? match[0].old : route;
         return routeToGroupBy;
       })
-    ).map(([route, partitions]) => {
-      return { route, count: partitions.length };
-    });
+    )
+      // NOTE: This [arr] is a bit annoying shape, and an artefact of the group / partition / map nesting
+      .map(([route, arr]) => {
+        console.log("obj", arr);
+        return { route, count: arr[0].partitions.length };
+      });
 
     requestCounts = {
       type: "ByRoutes",
@@ -391,8 +391,6 @@ function calculateResults(sourceLines, minutes, routes, countByRoutes) {
       map(partitions, partition => {
         return {
           route,
-          // TODO: I think I forgot to flatten something somewhere? Or the property should be called 'partitions', not 'partition'
-          // YUP, forgot to flatten, or call it 'partitions'. Also affects the counts!
           startItemPosix: partition[0]
         };
       })
