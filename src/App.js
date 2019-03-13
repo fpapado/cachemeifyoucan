@@ -25,6 +25,11 @@ const SetRoutes = text => ({
   text
 });
 
+const SetCountByRoutes = on => ({
+  type: "SetCountByRoutes",
+  on
+});
+
 const SetMinutes = minutes => ({
   type: "SetMinutes",
   minutes
@@ -55,13 +60,20 @@ const reducer = (prevState, action) => {
         minutes: parseInt(action.minutes)
       };
 
+    case "SetCountByRoutes":
+      return {
+        ...prevState,
+        countByRoutes: action.on
+      };
+
     case "CalculateResults":
       return {
         ...prevState,
         results: calculateResults(
           prevState.sourceLines,
           prevState.minutes,
-          prevState.routes
+          prevState.routes,
+          prevState.countByRoutes
         )
       };
 
@@ -74,6 +86,7 @@ const initState = {
   sourceLines: "",
   minutes: 10,
   routes: "",
+  countByRoutes: true,
   results: null
 };
 
@@ -109,6 +122,7 @@ function App() {
                 </p>
                 <textarea
                   id="sourceTextarea"
+                  name="sourceTextarea"
                   aria-describedby="sourceTextAreaDescription"
                   className="w-100 code mb3 pa3"
                   placeholder={mockInput}
@@ -128,11 +142,12 @@ function App() {
                   id="routeTextareaDescription"
                 >
                   Routes are used to help group URLs. They must be{" "}
-                  <b>comma-separated</b>. If a route does not match, then the path is
-                  shown verbatim.
+                  <b>comma-separated</b>. If a route does not match, then the
+                  path is shown verbatim.
                 </p>
                 <textarea
                   id="routeTextarea"
+                  name="routeTextarea"
                   aria-describedby="sourceTextAreaDescription"
                   className="w-100 code mb3 pa3"
                   placeholder={mockRoutes}
@@ -158,6 +173,32 @@ function App() {
                   <div className="f5 f4-ns">minutes</div>
                 </div>
               </div>
+              <div className="mb4">
+                <p className="db mb3 f4 f3-ns lh-title fw6">Request count</p>
+                <p
+                  className="mt0 mb3 f5 f4-ns lh-copy measure"
+                  id="countByRoutesDescription"
+                >
+                  Whether to display the total request counts by route. Note
+                  that this has no effect on the output log lines, which are
+                  always by the full path/URL.
+                </p>
+                <div className="f5 f4-ns lh-copy v-mid">
+                  <label htmlFor="countByRoutes" className="mr2">
+                    Count requests by routes
+                  </label>
+                  <input
+                    id="countByRoutes"
+                    name="countByRoutes"
+                    aria-describedby="countByRoutesDescription"
+                    type="checkbox"
+                    checked={state.countByRoutes}
+                    onChange={ev =>
+                      dispatch(SetCountByRoutes(ev.target.checked))
+                    }
+                  />
+                </div>
+              </div>
               <button
                 className="f5 f4-ns fw6 pv2 ph3 bg-dark-blue hover-bg-dark-pink white br1 bn pointer"
                 onClick={ev => {
@@ -176,10 +217,13 @@ function App() {
               <>
                 <section className="mb4">
                   <h3 className="f4 f3-ns mt0 mb3 lh-title">
-                    Request Count by Route
+                    Request Count by{" "}
+                    {state.results.requestCounts.type === "ByRoutes"
+                      ? "Route"
+                      : "URL"}
                   </h3>
                   <dl className="mw5 f5 f4-ns lh-copy">
-                    {state.results.countsByRoute.map(res => (
+                    {state.results.requestCounts.counts.map(res => (
                       <div key={res.route} className="flex mb2 tl">
                         <dt>{res.route}</dt>
                         <dd className="ml-auto">{res.count}</dd>
@@ -277,7 +321,7 @@ function partitionByTime(minutes, arr) {
   return partitions;
 }
 
-function calculateResults(sourceLines, minutes, routes) {
+function calculateResults(sourceLines, minutes, routes, countByRoutes) {
   // For the purpose of paritioning, consider the URLs verbatim
   const groupedByUrl = groupBy(sourceLines, ({ route }) => {
     return route;
@@ -292,27 +336,43 @@ function calculateResults(sourceLines, minutes, routes) {
       return { route, partition };
     }
   );
-  console.log('partitionedByTime', partitionedByTime);
+  console.log("partitionedByTime", partitionedByTime);
 
   // Then, get the counts by route by grouping and taking the number of partitions
-  const countsByRoute = Object.entries(
-    groupBy(partitionedByTime, ({ route }) => {
-      const match = matchit.match(route, routes);
-      console.log({match, routes})
-      // If there is a match, group by that, otherwise group verbatim
-      const routeToGroupBy = match.length ? match[0].old : route;
-      return routeToGroupBy;
-    })
-  ).map(([route, partitions]) => {
-    return { route, count: partitions.length };
-  });
+  let requestCounts;
+  if (countByRoutes) {
+    const countsByRoute = Object.entries(
+      groupBy(partitionedByTime, ({ route }) => {
+        const match = matchit.match(route, routes);
+        // If there is a match, group by that, otherwise group verbatim
+        const routeToGroupBy = match.length ? match[0].old : route;
+        return routeToGroupBy;
+      })
+    ).map(([route, partitions]) => {
+      return { route, count: partitions.length };
+    });
 
-  console.log("Counts by route", countsByRoute);
+    requestCounts = {
+      type: "ByRoutes",
+      counts: countsByRoute
+    };
+  } else {
+    const countsByURL = Object.entries(groupBy(partitionedByTime, "route")).map(
+      ([route, partitions]) => {
+        return { route, count: partitions.length };
+      }
+    );
+
+    requestCounts = {
+      type: "ByURL",
+      counts: countsByURL
+    };
+  }
 
   // Get the resulting log lines. To do that, iterate over partitionedByTime, taking the first item of each partition. Then, sort again by time.
   const resultLogLines = "";
 
-  return { countsByRoute };
+  return { requestCounts };
 }
 
 export default App;
