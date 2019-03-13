@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect } from "react";
+import React, { useReducer } from "react";
 import { map, flatMap, sortBy, groupBy } from "lodash-es";
 import * as matchit from "matchit";
 
@@ -9,8 +9,8 @@ const mockInput = `1552321187728 /2019
 1552321187716 /2019/saskatoon/omg-did-not-expect-this
 `;
 
-const mockRoutes = `/:season',
-'/:season/:eventId',
+const mockRoutes = `/:season,
+/:season/:eventId',
 `;
 
 const SetSourceLines = text => ({
