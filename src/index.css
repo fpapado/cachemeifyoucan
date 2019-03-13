@@ -1,0 +1,29 @@
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/Inter-Regular-subset.woff2) format("woff2");
+  unicode-range: U+0-FF, U+131, U+152, U+153, U+2bb, U+2bc, U+2c6, U+2da, U+2dc,
+    U+2000-206f, U+2074, U+20ac, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+    U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(/fonts/Inter-SemiBold-subset.woff2) format("woff2");
+  unicode-range: U+0-FF, U+131, U+152, U+153, U+2bb, U+2bc, U+2c6, U+2da, U+2dc,
+    U+2000-206f, U+2074, U+20ac, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF,
+    U+FFFD;
+}
+
+.inter {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}

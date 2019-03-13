@@ -1,6 +1,7 @@
 import React, { useReducer } from "react";
 import { map, flatMap, sortBy, groupBy } from "lodash-es";
 import * as matchit from "matchit";
+import './index.css';
 
 const mockInput = `1552321187728 /2019
 1552321187716 /2019/saskatoon
@@ -92,7 +93,7 @@ function App() {
   const [state, dispatch] = useReducer(reducer, initState);
 
   return (
-    <div className="pa3 min-vh-100 flex flex-column bg-near-white sans-serif lh-copy">
+    <div className="pa3 min-vh-100 flex flex-column bg-near-white inter lh-copy">
       <header className="pv3 tc mb4 mb5-ns">
         <h1 className="f2 f1-ns mt0 mb0 lh-title ttu">Cache me if you can</h1>
         <p className="f5 f4-ns lh-copy">
@@ -163,7 +164,8 @@ function App() {
                 <div className="flex items-baseline">
                   <input
                     id="cachetime"
-                    className="db w4 mb3 mr2 pa2"
+                    type="number"
+                    className="db w4 mb3 mr2 pa2 tnum"
                     placeholder="10"
                     value={state.minutes}
                     onChange={ev => dispatch(SetMinutes(ev.target.value))}
@@ -224,7 +226,7 @@ function App() {
                     {state.results.requestCounts.counts.map(res => (
                       <div key={res.route} className="flex mb2 tl">
                         <dt>{res.route}</dt>
-                        <dd className="ml-auto">{res.count}</dd>
+                        <dd className="ml-auto tnum">{res.count}</dd>
                       </div>
                     ))}
                   </dl>
