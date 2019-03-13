@@ -1,5 +1,5 @@
 import React, { useReducer, useEffect } from "react";
-import { mapValues, sortBy, groupBy } from "lodash-es";
+import { map, flatMap, sortBy, groupBy } from "lodash-es";
 import * as matchit from "matchit";
 
 // TODO: Route manifest
@@ -232,9 +232,20 @@ function App() {
                   </dl>
                 </section>
                 <section className="mb4">
-                  <h3 className="f4 f3-ns mt0 mb3 lh-title">
-                    Result log lines
-                  </h3>
+                  <label
+                    htmlFor="resultTextArea"
+                    className="db"
+                  >
+                    <h3 className="mt0 mb3 f4 f3-ns lh-title fw6">Result log lines</h3>
+                  </label>
+                  <textarea
+                    id="resultTextArea"
+                    name="resultTextArea"
+                    className="w-100 code mb3 pa3"
+                    rows="10"
+                    value={state.results.resultLogLines}
+                    readOnly
+                  />
                 </section>
               </>
             ) : (
@@ -332,8 +343,8 @@ function calculateResults(sourceLines, minutes, routes, countByRoutes) {
   const partitionedByTime = Object.entries(groupedByUrl).map(
     ([route, routeAndPosixArr]) => {
       const posixArr = routeAndPosixArr.map(obj => obj.posix);
-      const partition = partitionByTime(minutes, posixArr);
-      return { route, partition };
+      const partitions = partitionByTime(minutes, posixArr);
+      return { route, partitions };
     }
   );
   console.log("partitionedByTime", partitionedByTime);
@@ -369,10 +380,29 @@ function calculateResults(sourceLines, minutes, routes, countByRoutes) {
     };
   }
 
-  // Get the resulting log lines. To do that, iterate over partitionedByTime, taking the first item of each partition. Then, sort again by time.
-  const resultLogLines = "";
+  // Get the resulting log lines.
+  // To do that:
+  //   1. iterate over partitionedByTime, taking the first item of each partition, with the route.
+  //   2. Then, sort again by time.
+  //   3. Map to "POSIX route"
+  //   3. Finally, join with newlines, for display
+  const resultLogLines = sortBy(
+    flatMap(partitionedByTime, ({ route, partitions }) =>
+      map(partitions, partition => {
+        return {
+          route,
+          // TODO: I think I forgot to flatten something somewhere? Or the property should be called 'partitions', not 'partition'
+          // YUP, forgot to flatten, or call it 'partitions'. Also affects the counts!
+          startItemPosix: partition[0]
+        };
+      })
+    ),
+    "startItemPosix"
+  )
+    .map(({ route, startItemPosix }) => `${startItemPosix} ${route}`)
+    .join("\n");
 
-  return { requestCounts };
+  return { requestCounts, resultLogLines };
 }
 
 export default App;
