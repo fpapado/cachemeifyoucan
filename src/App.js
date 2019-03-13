@@ -93,7 +93,7 @@ function App() {
   const [state, dispatch] = useReducer(reducer, initState);
 
   return (
-    <div className="pa3 min-vh-100 flex flex-column bg-near-white inter lh-copy">
+    <div className="pa3 min-vh-100 flex flex-column bg-white inter lh-copy">
       <header className="pv3 tc mb4 mb5-ns">
         <h1 className="f2 f1-ns mt0 mb0 lh-title ttu">Cache me if you can</h1>
         <p className="f5 f4-ns lh-copy">
@@ -183,24 +183,25 @@ function App() {
                   that this has no effect on the output log lines, which are
                   always by the full path/URL.
                 </p>
-                <div className="f5 f4-ns lh-copy v-mid">
-                  <label htmlFor="countByRoutes" className="mr2">
-                    Count requests by routes
-                  </label>
+                <div className="f5 f4-ns lh-copy v-mid fw6 enhanced-checkbox-container">
                   <input
                     id="countByRoutes"
                     name="countByRoutes"
                     aria-describedby="countByRoutesDescription"
+                    className="enhanced-checkbox-input"
                     type="checkbox"
                     checked={state.countByRoutes}
                     onChange={ev =>
                       dispatch(SetCountByRoutes(ev.target.checked))
                     }
                   />
+                  <label htmlFor="countByRoutes" className="enhanced-checkbox-label">
+                    Count requests by routes
+                  </label>
                 </div>
               </div>
               <button
-                className="f5 f4-ns fw6 pv2 ph3 bg-dark-blue hover-bg-dark-pink white br1 bn pointer"
+                className="f5 f4-ns fw6 pv2 ph3 bg-blue hover-bg-dark-pink white br1 bn pointer"
                 onClick={ev => {
                   ev.preventDefault();
                   dispatch(CalculateResults());
