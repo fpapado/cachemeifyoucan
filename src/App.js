@@ -1,5 +1,5 @@
 import React, { useReducer, useEffect } from "react";
-import { sortBy, groupBy } from "lodash-es";
+import { mapValues, sortBy, groupBy } from "lodash-es";
 import * as matchit from "matchit";
 
 // TODO: Route manifest
@@ -11,7 +11,7 @@ const mockInput = `1552321187728 /2019
 1552321187716 /2019/saskatoon/omg-did-not-expect-this
 `;
 
-const mockRoutes = `'/:season/',
+const mockRoutes = `/:season',
 '/:season/:eventId',
 `;
 
@@ -36,7 +36,6 @@ const CalculateResults = () => ({
 
 // TODO: Consider storing the "processed" data, and not the raw strings here
 const reducer = (prevState, action) => {
-  console.log(prevState, action);
   switch (action.type) {
     case "SetSourceLines":
       return {
@@ -80,10 +79,6 @@ const initState = {
 
 function App() {
   const [state, dispatch] = useReducer(reducer, initState);
-
-  useEffect(() => {
-    console.log(state);
-  }, [state]);
 
   return (
     <div className="pa3 min-vh-100 flex flex-column bg-near-white sans-serif lh-copy">
@@ -132,8 +127,8 @@ function App() {
                   className="mt0 mb3 f5 f4-ns lh-copy measure"
                   id="routeTextareaDescription"
                 >
-                  Routes are used to help group URLs. They must be
-                  comma-separated. If a route does not match, then the path is
+                  Routes are used to help group URLs. They must be{" "}
+                  <b>comma-separated</b>. If a route does not match, then the path is
                   shown verbatim.
                 </p>
                 <textarea
@@ -179,15 +174,24 @@ function App() {
             <h2 className="f3 f2-ns mt0 mb4 lh-title">Results</h2>
             {state.results ? (
               <>
-                <h3 className="f4 f3-ns mt0 mb3 lh-title">Request Count</h3>
-                <dl className="mw5 f5 f4-ns lh-copy">
-                  {state.results.map(res => (
-                    <div key={res.route} className="flex mb2 tl">
-                      <dt>{res.route}</dt>
-                      <dd className="ml-auto">{res.count}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <section className="mb4">
+                  <h3 className="f4 f3-ns mt0 mb3 lh-title">
+                    Request Count by Route
+                  </h3>
+                  <dl className="mw5 f5 f4-ns lh-copy">
+                    {state.results.countsByRoute.map(res => (
+                      <div key={res.route} className="flex mb2 tl">
+                        <dt>{res.route}</dt>
+                        <dd className="ml-auto">{res.count}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </section>
+                <section className="mb4">
+                  <h3 className="f4 f3-ns mt0 mb3 lh-title">
+                    Result log lines
+                  </h3>
+                </section>
               </>
             ) : (
               <p className="f5 f4-ns lh-copy">No results... yet.</p>
@@ -207,7 +211,10 @@ function App() {
           <span role="img" aria-label="Grinning Face With Sweat">
             😅
           </span>{" "}
-          by <a className="dark-blue" href="https://fotis.xyz">Fotis Papadogeorgopoulos</a>
+          by{" "}
+          <a className="dark-blue" href="https://fotis.xyz">
+            Fotis Papadogeorgopoulos
+          </a>
         </p>
       </footer>
     </div>
@@ -271,24 +278,41 @@ function partitionByTime(minutes, arr) {
 }
 
 function calculateResults(sourceLines, minutes, routes) {
-  // TODO: Here, get the obj.route and group if it matches() a certain route, top-to-bottom
-  const groupedByRoute = groupBy(sourceLines, ({ route }) => {
-    const match = matchit.match(route, routes);
-    // If there is a match, group by that, otherwise group verbatim
-    const routeToGroupBy = match.length ? match[0].old : route;
-    return routeToGroupBy;
+  // For the purpose of paritioning, consider the URLs verbatim
+  const groupedByUrl = groupBy(sourceLines, ({ route }) => {
+    return route;
   });
-  console.log({ groupedByRoute });
 
-  const res = Object.entries(groupedByRoute).map(
+  // First, partition the log lines by URL
+  // GroupedByUrl -> Array<{route: string, partition: string[]}>
+  const partitionedByTime = Object.entries(groupedByUrl).map(
     ([route, routeAndPosixArr]) => {
       const posixArr = routeAndPosixArr.map(obj => obj.posix);
-      const count = partitionByTime(minutes, posixArr).length;
-      return { route, count };
+      const partition = partitionByTime(minutes, posixArr);
+      return { route, partition };
     }
   );
+  console.log('partitionedByTime', partitionedByTime);
 
-  return res;
+  // Then, get the counts by route by grouping and taking the number of partitions
+  const countsByRoute = Object.entries(
+    groupBy(partitionedByTime, ({ route }) => {
+      const match = matchit.match(route, routes);
+      console.log({match, routes})
+      // If there is a match, group by that, otherwise group verbatim
+      const routeToGroupBy = match.length ? match[0].old : route;
+      return routeToGroupBy;
+    })
+  ).map(([route, partitions]) => {
+    return { route, count: partitions.length };
+  });
+
+  console.log("Counts by route", countsByRoute);
+
+  // Get the resulting log lines. To do that, iterate over partitionedByTime, taking the first item of each partition. Then, sort again by time.
+  const resultLogLines = "";
+
+  return { countsByRoute };
 }
 
 export default App;
